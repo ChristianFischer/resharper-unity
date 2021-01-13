@@ -11,11 +11,14 @@ namespace JetBrains.ReSharper.Plugins.Unity.Rider.Debugger
     [DebuggerGlobalComponent]
     public class UnityOptions : IUnityOptions
     {
-        public UnityOptions()
+        private readonly UnityDebuggerWorkerHost myHost;
+
+        public UnityOptions(UnityDebuggerWorkerHost host)
         {
-            ExtensionsEnabled = Environment.GetEnvironmentVariable("_RIDER_UNITY_ENABLE_DEBUGGER_EXTENSIONS") == "1";
+            myHost = host;
+            // ExtensionsEnabled = Environment.GetEnvironmentVariable("_RIDER_UNITY_ENABLE_DEBUGGER_EXTENSIONS") == "1";
         }
 
-        public bool ExtensionsEnabled { get; }
+        public bool ExtensionsEnabled => myHost.Model.ShowCustomRenderers.Value;
     }
 }

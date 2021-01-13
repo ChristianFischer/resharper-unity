@@ -2,6 +2,7 @@ package com.jetbrains.rider.plugins.unity.run.configurations
 
 import com.intellij.execution.ExecutionResult
 import com.intellij.execution.Executor
+import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.execution.runners.ProgramRunner
 import com.intellij.openapi.diagnostic.Logger
@@ -11,6 +12,10 @@ import com.jetbrains.rider.debugger.DebuggerHelperHost
 import com.jetbrains.rider.debugger.DebuggerInitializingState
 import com.jetbrains.rider.debugger.DebuggerWorkerProcessHandler
 import com.jetbrains.rider.debugger.RiderDebugActiveDotNetSessionsTracker
+import com.jetbrains.rider.model.debuggerWorker.DebuggerStartInfoBase
+import com.jetbrains.rider.model.debuggerWorker.DebuggerWorkerModel
+import com.jetbrains.rider.model.unity.debuggerWorker.UnityDebuggerWorkerModel
+import com.jetbrains.rider.model.unity.debuggerWorker.UnityStartInfo
 import com.jetbrains.rider.model.unity.frontendBackend.frontendBackendModel
 import com.jetbrains.rider.plugins.unity.run.UnityDebuggerOutputListener
 import com.jetbrains.rider.plugins.unity.run.configurations.unityExe.UnityExeDebugProfileState
@@ -21,7 +26,9 @@ import com.jetbrains.rider.run.configurations.remote.MonoConnectRemoteProfileSta
 import com.jetbrains.rider.util.NetUtils
 import com.jetbrains.rider.util.startLongBackgroundAsync
 
-class UnityAttachToEditorProfileState(private val exeDebugProfileState : UnityExeDebugProfileState, private val remoteConfiguration: UnityAttachToEditorRunConfiguration, executionEnvironment: ExecutionEnvironment)
+class UnityAttachToEditorProfileState(private val exeDebugProfileState : UnityExeDebugProfileState,
+                                      private val remoteConfiguration: UnityAttachToEditorRunConfiguration,
+                                      executionEnvironment: ExecutionEnvironment)
     : MonoConnectRemoteProfileState(remoteConfiguration, executionEnvironment) {
     private val logger = Logger.getInstance(UnityAttachToEditorProfileState::class.java)
     private val project = executionEnvironment.project
@@ -73,6 +80,33 @@ class UnityAttachToEditorProfileState(private val exeDebugProfileState : UnityEx
         val cmd = super.createWorkerRunInfo(lifetime, helper, port)
         cmd.commandLine.withUnityExtensionsEnabledEnvironment(project)
         return cmd
+    }
+
+    override suspend fun createDebuggerWorker(
+        workerCmd: GeneralCommandLine,
+        protocolModel: DebuggerWorkerModel,
+        protocolServerPort: Int,
+        projectLifetime: Lifetime
+    ): DebuggerWorkerProcessHandler {
+
+        // TODO: How to terminate this lifetime?
+        // Ideally, UnityDebuggerWorkerModel would be an extension of DebuggerWorkerModel, but rdgen doesn't define
+        // the extension function that can call getOrCreateExtension, because you can't define an extension of a Root
+        val modelLifetime = projectLifetime.createNested()
+
+        val model = UnityDebuggerWorkerModel.create(modelLifetime, protocolModel.protocol)
+        model.showCustomRenderers.set(true)
+
+        return super.createDebuggerWorker(workerCmd, protocolModel, protocolServerPort, projectLifetime)
+    }
+
+    override suspend fun createModelStartInfo(lifetime: Lifetime): DebuggerStartInfoBase {
+        return UnityStartInfo(remoteConfiguration.address,
+            remoteConfiguration.port,
+            remoteConfiguration.listenPortForConnections,
+            null,
+            null,
+            false)
     }
 
     override fun getDebuggerOutputEventsListener(): IDebuggerOutputListener {

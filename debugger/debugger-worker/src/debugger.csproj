@@ -8,6 +8,11 @@
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>..\..\..\sign.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
+  <ItemGroup Label="Model">
+    <Compile Include="..\..\..\resharper\build\generated\Model\DebuggerWorker\**\*" LinkBase="Model">
+      <Visible>True</Visible>
+    </Compile>
+  </ItemGroup>
     <ItemGroup>
       <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net461" Version="1.0.0">
         <PrivateAssets>all</PrivateAssets>
